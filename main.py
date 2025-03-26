@@ -1,30 +1,63 @@
 import random
-# import 
+import time
+from collections import defaultdict
 
 MAX_LINES = 3
 MAX_BET = 100
 MIN_BET = 1
 
+SPINS = 10
+TOTAL_BET = 0
+TOTAL_WINNINGS = 0
+START_TIME = time.time()
+
 ROWS = 3
 COLS = 3
 
-symbols_count = {
-    "A": 2,
-    "B": 4,
-    "C": 6,
-    "D": 8,
+symbols_value = {
+    "A": 6,  # Rarest symbol, highest payout
+    "B": 5,   # Uncommon symbol
+    "C": 3,   # Common symbol
+    "D": 2,   # Most common symbol
+    "W": 1,  # Wildcard symbol
+    "S": 0,  # Scatter symbol
 }
 
-symbols_value = {
-    "A": 5,
-    "B": 4,
-    "C": 3,
-    "D": 2,
+symbols_count = {
+    "A": 5,    # Rarest (2-3 instances)
+    "B": 6,    # Uncommon (4-5 instances)
+    "C": 7,    # Common (6-7 instances)
+    "D": 7,    # Most common (8-9 instances)
 }
+
+def display_status():
+    print(f"Spins: {SPINS} | Total Bet: {TOTAL_BET} | Total Winnings: {TOTAL_WINNINGS} | Time Played: {time.time() - START_TIME}")
 
 def check_winnings(columns, lines, bet, values):
+    winnings = 0
+    winning_lines = []
+    scatter_count = 0
+
+    for column in columns:
+        for symbol in column:
+            if symbol == "S":
+                scatter_count += 1
+
+    if scatter_count >= 3:
+        winnings += scatter_count * bet * 2
+        print(f"Scatter bonus! {scatter_count} scatters found!")
+
     for line in range(lines):
-        
+        symbol = columns[0][line]
+        for column in columns:
+            symbol_to_check = column[line]
+            if symbol != symbol_to_check:
+                break
+        else:
+            winnings += values[symbol] * bet
+            winning_lines.append(line + 1)
+
+    return winnings, winning_lines
 
 def get_slot_machine_spin(rows, cols, symbols):
     all_symbols = []
@@ -93,8 +126,8 @@ def get_bet():
             print("Please enter a valid bet.")
     return amount
 
-def main():
-    balance = deposit()
+def spin(balance):
+    global TOTAL_BET, TOTAL_WINNINGS
     lines = get_number_of_lines()
     while True:
         bet = get_bet()
@@ -102,11 +135,39 @@ def main():
         if total_bet > balance:
             print(f"{total_bet}/{balance} You don't have enough balance to place this bet.")
         else:   
+            TOTAL_BET += total_bet
             break
 
     print(f"You are betting ${bet} on {lines} lines. Total Bet = ${total_bet}. Good luck!")
 
     slots = get_slot_machine_spin(ROWS, COLS, symbols_count)
     print_slot_machine_spin(slots)
+
+    winnings, winning_lines = check_winnings(slots, lines, bet, symbols_value)
+    if winnings == 0:
+        print("You lost! Better luck next time.")
+    else:
+        print(f"You won ${winnings}!")
+    if winnings > 0:
+        print(f"Winning lines:", *winning_lines)
+        TOTAL_WINNINGS += winnings
+
+    return winnings - total_bet
+
+
+def main():
+    balance = deposit()
+    while True:
+        print(f"Current Balance: ${balance}")
+        start = input("Pres enter to play, Q to quit & S for stats: ")
+        if start.lower() == "s":
+            display_status()
+            continue
+        if start.lower() == "q":
+            break
+        balance += spin(balance)
+
+    print(f"Your final balance is ${balance}.")
+
 
 main()
